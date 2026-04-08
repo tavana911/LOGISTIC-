@@ -52,7 +52,7 @@ const Footer = () => (
     </div>
     <div className="border-t border-secondary-foreground/10">
       <div className="container-main py-6 text-center text-sm text-secondary-foreground/50">
-        © 2024 PAUPEMAGE LOGISTICS. All rights reserved.
+        © 2026 PAUPEMAGE LOGISTICS. All rights reserved.
       </div>
     </div>
   </footer>
