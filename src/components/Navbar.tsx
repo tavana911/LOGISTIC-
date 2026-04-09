@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { Button } from "../components/ui/button";
 import logo from "../assets/paupemage-logo.jpg";
@@ -42,23 +42,26 @@ const Navbar = () => {
 
         <div className="hidden md:flex items-center gap-1">
           {navLinks.map((l) => (
-            <Link
+            <NavLink
               key={l.to}
               to={l.to}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                location.pathname === l.to
-                  ? "text-primary bg-primary/5"
-                  : "text-foreground hover:text-primary hover:bg-primary/5"
-              }`}
+              end={l.to === "/"}
+              className={({ isActive }) =>
+                `px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive
+                    ? "text-primary bg-primary/5"
+                    : "text-foreground hover:text-primary hover:bg-primary/5"
+                }`
+              }
             >
               {l.label}
-            </Link>
+            </NavLink>
           ))}
-          <Link to="/contact">
+          <NavLink to="/contact">
             <Button className="ml-3 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold">
               Get a Quote
             </Button>
-          </Link>
+          </NavLink>
         </div>
 
         <button className="md:hidden p-2" onClick={() => setOpen(!open)}>
@@ -70,21 +73,24 @@ const Navbar = () => {
         <div className="md:hidden bg-background border-t animate-fade-in">
           <div className="container-main py-4 flex flex-col gap-2">
             {navLinks.map((l) => (
-              <Link
+              <NavLink
                 key={l.to}
                 to={l.to}
-                className={`px-4 py-3 rounded-md text-sm font-medium ${
-                  location.pathname === l.to ? "text-primary bg-primary/5" : "text-foreground"
-                }`}
+                end={l.to === "/"}
+                className={({ isActive }) =>
+                  `px-4 py-3 rounded-md text-sm font-medium ${
+                    isActive ? "text-primary bg-primary/5" : "text-foreground"
+                  }`
+                }
               >
                 {l.label}
-              </Link>
+              </NavLink>
             ))}
-            <Link to="/contact">
+            <NavLink to="/contact">
               <Button className="w-full mt-2 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold">
                 Get a Quote
               </Button>
-            </Link>
+            </NavLink>
           </div>
         </div>
       )}

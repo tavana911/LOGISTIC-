@@ -1,19 +1,11 @@
 import { Target, Eye, Heart, Shield, Zap } from "lucide-react";
 import aboutTeam from "../assets/about-team.jpg";
-import careersHero from "../assets/careers-hero.jpg";
 
 const values = [
   { icon: Target, title: "Excellence", desc: "Striving for the highest standards in every shipment" },
   { icon: Shield, title: "Integrity", desc: "Transparent and honest in all business dealings" },
   { icon: Zap, title: "Innovation", desc: "Leveraging technology to optimize logistics" },
   { icon: Heart, title: "Customer Focus", desc: "Your success is our top priority" },
-];
-
-const team = [
-  { name: "James Morrison", role: "Chief Executive Officer" },
-  { name: "Lisa Chen", role: "Chief Operations Officer" },
-  { name: "Robert Williams", role: "VP of Global Logistics" },
-  { name: "Maria Garcia", role: "VP of Technology" },
 ];
 
 const About = () => (
@@ -62,19 +54,6 @@ const About = () => (
               </div>
               <h3 className="font-heading font-bold mb-2">{v.title}</h3>
               <p className="text-sm text-muted-foreground">{v.desc}</p>
-            </div>
-          ))}
-        </div>
-
-        <h2 className="text-2xl md:text-3xl font-heading font-bold text-center mb-12">Our Leadership</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
-          {team.map(t => (
-            <div key={t.name} className="text-center">
-              <div className="w-32 h-32 rounded-full bg-primary/10 mx-auto mb-4 flex items-center justify-center">
-                <span className="text-3xl font-heading font-bold text-primary">{t.name.split(" ").map(n=>n[0]).join("")}</span>
-              </div>
-              <h3 className="font-heading font-semibold">{t.name}</h3>
-              <p className="text-sm text-muted-foreground">{t.role}</p>
             </div>
           ))}
         </div>
