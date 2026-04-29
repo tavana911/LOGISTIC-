@@ -7,10 +7,36 @@
     <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-      #results { width: 100%; max-width: 600px; margin: 20px auto; font-family: 'Segoe UI', sans-serif; position: relative; z-index: 9999; }
-      .status-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border-top: 8px solid #007bff; margin-bottom: 20px; }
-      .journey-log { border-left: 2px solid #007bff; padding-left: 20px; margin: 15px 0; position: relative; }
-      .journey-dot { position: absolute; left: -7px; top: 5px; width: 12px; height: 12px; background: #007bff; border-radius: 50%; border: 2px solid white; }
+      :root { --primary: #007bff; --bg: #f8fafc; --text: #1e293b; }
+      #results { width: 95%; max-width: 650px; margin: 40px auto; font-family: 'Segoe UI', system-ui, sans-serif; position: relative; z-index: 9999; }
+      
+      .status-card { 
+        background: white; padding: 30px; border-radius: 24px; 
+        box-shadow: 0 20px 50px rgba(0,0,0,0.1); border-top: 10px solid var(--primary); 
+        margin-bottom: 30px; animation: slideUp 0.5s ease-out;
+      }
+
+      @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+      .progress-container { margin: 30px 0; background: #e2e8f0; height: 12px; border-radius: 10px; overflow: hidden; }
+      .progress-bar { 
+        background: linear-gradient(90deg, #007bff, #00d2ff); height: 100%; width: 0%; 
+        transition: width 1.5s cubic-bezier(0.1, 0, 0.3, 1); 
+      }
+
+      .journey-log { border-left: 2px solid #e2e8f0; padding-left: 25px; margin: 25px 0; position: relative; }
+      .journey-dot { 
+        position: absolute; left: -7px; top: 4px; width: 12px; height: 12px; 
+        background: var(--primary); border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px var(--primary);
+      }
+      
+      .info-row { display: flex; justify-content: space-between; margin-bottom: 25px; gap: 15px; }
+      .label { display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; }
+      .value { display: block; font-size: 16px; color: var(--text); font-weight: 600; }
+      
+      h4 { margin-top: 35px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; color: var(--text); font-size: 18px; }
+      .log-time { color: #64748b; font-size: 12px; margin-top: 4px; display: block; }
+      .location-tag { background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-bottom: 5px; display: inline-block; }
     </style>
   </head>
 
@@ -26,78 +52,107 @@
       const key = 'sb_publishable_QUI7elFmVBaHTmw-kAgtVw_7aJKpxq0';
       const _paupemage = supabase.createClient(url, key);
 
+      function calculateProgress(status) {
+        const s = (status || "").toLowerCase();
+        if (s.includes('delivered')) return 100;
+        if (s.includes('transit') || s.includes('moving')) return 65;
+        if (s.includes('picked') || s.includes('received')) return 35;
+        if (s.includes('hub') || s.includes('sorting')) return 80;
+        return 15;
+      }
+
       async function trackShipment(manualNum = null) {
         const resultsDiv = document.getElementById('results');
-        
         let num = manualNum;
         if (!num) {
           const allInputs = document.querySelectorAll('input');
           for (let i of allInputs) {
-            if (i.value.trim().length > 2) { 
-              num = i.value.trim();
-              break;
-            }
+            if (i.value.trim().length > 2) { num = i.value.trim(); break; }
           }
         }
-
         if (!num) return;
-        resultsDiv.innerHTML = `<div style="text-align:center; padding:30px; background:white; border-radius:12px;">Searching...</div>`;
 
-        // STEP 1: Get the shipment details ONLY (No logs here)
+        resultsDiv.innerHTML = `<div style="text-align:center; padding:50px; background:white; border-radius:20px;">📡 Fetching the latest updates...</div>`;
+        resultsDiv.scrollIntoView({ behavior: 'smooth' });
+
+        // 1. Get Shipment
         const { data: shipment, error: sError } = await _paupemage
-          .from('shipment') 
-          .select('*') 
-          .eq('tracking_number', num)
-          .maybeSingle();
+          .from('shipment').select('*').eq('tracking_number', num).maybeSingle();
 
-        if (sError) {
-          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:red;">Error: ${sError.message}</div>`;
+        if (sError || !shipment) {
+          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:#ef4444;">❌ Tracking ID <b>${num}</b> not found. Check your entry in Admin.</div>`;
           return;
         }
 
-        if (!shipment) {
-          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:orange;">ID <b>${num}</b> not found.</div>`;
-          return;
-        }
-
-        // STEP 2: Get the logs separately using the shipment's ID
-        // This avoids the "Multiple Relationships" error completely!
-        const { data: logs, error: lError } = await _paupemage
+        // 2. Get Logs (Strict Order: Newest First)
+        const { data: logs } = await _paupemage
           .from('logs')
           .select('*')
-          .eq('shipment_id', shipment.id);
+          .eq('shipment_id', shipment.id)
+          .order('created_at', { ascending: false }); // THIS FIXES THE LOG ORDER
 
-        const sortedLogs = logs ? logs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)) : [];
+        const progressPercent = calculateProgress(shipment.current_status);
 
-        // STEP 3: Display everything
         resultsDiv.innerHTML = `
           <div class="status-card">
-            <h2 style="margin:0; color:#333;">${shipment.tracking_number}</h2>
-            <p><b>Current Status:</b> <span style="color:#007bff; font-weight:bold;">${shipment.current_status}</span></p>
-            <p><b>Destination:</b> ${shipment.destination}</p>
-            <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+            <div class="info-row">
+                <div class="data-box">
+                    <span class="label">ID Number</span>
+                    <span class="value" style="color:var(--primary); font-size: 24px;">${shipment.tracking_number}</span>
+                </div>
+                <div style="text-align:right;">
+                    <span class="label">Status</span>
+                    <b style="color:#059669; font-size: 16px;">${shipment.current_status}</b>
+                </div>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-bar" id="p-bar" style="width: 0%"></div>
+            </div>
+
+            <div class="info-row">
+                <div class="data-box">
+                    <span class="label">Final Destination</span>
+                    <span class="value">${shipment.destination}</span>
+                </div>
+                <div style="text-align:right;">
+                    <span class="label">Network</span>
+                    <span class="value">Paupemage Logistics</span>
+                </div>
+            </div>
+
             <h4>Journey History</h4>
-            ${sortedLogs.length > 0 ? sortedLogs.map(l => `
-              <div class="journey-log">
-                <div class="journey-dot"></div>
-                <b>${l.status_update}</b><br>
-                <small>${l.location} | ${new Date(l.created_at).toLocaleString()}</small>
-              </div>
-            `).join('') : '<p style="color:#999;">No history logs found for this package yet.</p>'}
-            <div id="map" style="height:200px; border-radius:12px; margin-top:20px; border:1px solid #eee;"></div>
+            <div style="max-height: 450px; overflow-y: auto; padding-right: 15px;">
+                ${logs && logs.length > 0 ? logs.map(l => `
+                <div class="journey-log">
+                    <div class="journey-dot"></div>
+                    <div class="location-tag">${l.location.toUpperCase()}</div><br>
+                    <b style="color:var(--text); font-size:15px;">${l.status_update}</b>
+                    <span class="log-time">${new Date(l.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                `).join('') : '<p style="color:#94a3b8; text-align:center;">Registering package details...</p>'}
+            </div>
+
+            <div id="map" style="height:250px; border-radius:18px; margin-top:30px; border:1px solid #e2e8f0;"></div>
           </div>
         `;
         
-        resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        // Progress animation
+        setTimeout(() => { 
+          const bar = document.getElementById('p-bar');
+          if(bar) bar.style.width = progressPercent + '%';
+        }, 150);
 
+        // Map setup
         setTimeout(() => {
-            const map = L.map('map').setView([6.5244, 3.3792], 4);
+            const map = L.map('map').setView([6.5244, 3.3792], 2);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        }, 300);
+        }, 400);
       }
 
       window.trackShipment = trackShipment;
-
+      
+      // Listener for React Button
       document.addEventListener('click', (e) => {
         if (e.target.innerText && e.target.innerText.toUpperCase().includes('TRACK')) {
           setTimeout(() => trackShipment(), 200);
