@@ -4,26 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PAUPEMAGE LOGISTICS - Admin Dashboard</title>
-const PAUPEMAGE_KEY = "TheBoss@paupemage1"; 
-
-function checkAccess() {
-    const accessStatus = sessionStorage.getItem("adminAllowed");
-
-    if (accessStatus !== "true") {
-        const password = prompt("Please enter the Admin Security Key:");
-        
-        if (password === PAUPEMAGE_KEY) {
-            sessionStorage.setItem("adminAllowed", "true");
-            document.body.style.display = "block"; // Shows the page
-            alert("Access Granted, Boss. ");
-        } else {
-            alert("Access Denied. Redirecting...");
-            window.location.href = "index.html"; // Kicks them back to the main site
-        }
+<script>
+  // This runs IMMEDIATELY before the page even tries to draw
+  (function() {
+    const PAUPEMAGE_KEY = "TheBoss@paupemage1"; 
+    
+    // Check if they already logged in this session
+    if (sessionStorage.getItem("adminAllowed") === "true") {
+      // If already allowed, show the page immediately
+      return; 
     } else {
-        document.body.style.display = "block"; // Shows the page if already authorized
+      // If not, ask for password
+      const password = prompt("Paupemage Logistics Admin: Please enter Security Key");
+      
+      if (password === PAUPEMAGE_KEY) {
+        sessionStorage.setItem("adminAllowed", "true");
+      } else {
+        alert("Access Denied.");
+        window.location.href = "index.html";
+      }
     }
-}  
+  })();
+</script>
+
+<style>
+  /* Only hide the body if the session isn't allowed yet */
+  body { display: none; }
+  .authorized body { display: block !important; }
+</style>
+
+<script>
+  // This runs after the body is loaded to reveal it
+  window.onload = function() {
+    if (sessionStorage.getItem("adminAllowed") === "true") {
+      document.body.style.display = "block";
+    }
+  }
+</script>
     <style>
         * {
             margin: 0;
