@@ -130,13 +130,18 @@
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         // Reveal body after password check
-        window.onload = () => {
-            if (sessionStorage.getItem("adminAllowed") === "true") {
-                document.body.style.display = "block";
-                loadRecentUpdates();
-            }
-        };
-
+       function revealAdmin() {
+    if (sessionStorage.getItem("adminAllowed") === "true") {
+        // This forces the body to show even if other things are still loading
+        document.body.setAttribute("style", "display: block !important");
+        console.log("Admin Revealed");
+        
+        // Only run this if the database is ready
+        if (typeof loadRecentUpdates === "function") {
+            loadRecentUpdates();
+        }
+    }
+}
         // Generate ID
         document.getElementById('generateBtn').onclick = () => {
             const id = "PM-" + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
