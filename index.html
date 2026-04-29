@@ -111,14 +111,11 @@
 
         resultsDiv.innerHTML = "Searching for Package #" + trackingNumber + "...";
 
-        // Convert to number for the database
-        const trackingID = parseInt(trackingNumber);
-
-        // 1. Get the Main Shipment Info
+        // 1. Get the Main Shipment Info by tracking_number
         const { data: shipment, error: shipError } = await paupemageDB
           .from('shipment')
           .select('*')
-          .eq('id', trackingID)
+          .eq('tracking_number', trackingNumber)
           .maybeSingle(); // This is safer than .single()
 
         if (shipError) {
@@ -128,7 +125,7 @@
         }
 
         if (!shipment) {
-          resultsDiv.innerHTML = `<p style='color:red;'>❌ No package found with ID: ${trackingID}</p>`;
+          resultsDiv.innerHTML = `<p style='color:red;'> No package found with tracking number: ${trackingNumber}</p>`;
           return;
         }
 
@@ -136,7 +133,7 @@
         const { data: logs, error: logError } = await paupemageDB
           .from('logs')
           .select('*')
-          .eq('shipment_id', trackingID)
+          .eq('shipment_id', shipment.id)
           .order('created_at', { ascending: false });
 
         // 3. Display Results
@@ -257,5 +254,15 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script type="module" src="/src/main.tsx"></script>
+    whatsspp link 
+<div id="support-section" style="display:none; text-align: center; padding: 20px; border-top: 1px solid #eee;">
+    <p style="font-size: 14px; color: #666;">Need help with this shipment?</p>
+    <a id="whatsappLink" href="" target="_blank" class="whatsapp-btn">
+        <span class="whatsapp-icon"> </span> Chat with Paupemage Support
+    </a>
+</div>
+
+
+
   </body>
 </html>

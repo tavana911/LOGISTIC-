@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAUPEMAGE LOGISTICS - Admin Dashboard</title>
+const PAUPEMAGE_KEY = "TheBoss@paupemage1"; 
+
+function checkAccess() {
+    const accessStatus = sessionStorage.getItem("adminAllowed");
+
+    if (accessStatus !== "true") {
+        const password = prompt("Please enter the Admin Security Key:");
+        
+        if (password === PAUPEMAGE_KEY) {
+            sessionStorage.setItem("adminAllowed", "true");
+            document.body.style.display = "block"; // Shows the page
+            alert("Access Granted, Boss. ");
+        } else {
+            alert("Access Denied. Redirecting...");
+            window.location.href = "index.html"; // Kicks them back to the main site
+        }
+    } else {
+        document.body.style.display = "block"; // Shows the page if already authorized
+    }
+}  
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Hide everything until the password is correct */
+        body {
+            display: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+        }
+
+        .card h2 {
+            color: #007bff;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .recent-updates {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+        }
+
+        .recent-updates h3 {
+            color: #007bff;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        .update-item {
+            border-left: 4px solid #007bff;
+            padding-left: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .update-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .update-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .update-status {
+            font-weight: 600;
+            color: #007bff;
+        }
+
+        .update-time {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .update-location {
+            color: #495057;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1> PAUPEMAGE LOGISTICS</h1>
+            <p>Admin Dashboard - Private Access Only</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Create New Shipment -->
+            <div class="card">
+                <h2> Create New Shipment</h2>
+                <form id="createShipmentForm">
+                    <div class="form-group">
+                        <label for="trackingNumber">Tracking Number</label>
+                        <input type="text" id="trackingNumber" placeholder="Click 'Generate' to create ID" readonly style="background: #e9ecef;">
+                    </div>
+                    <button type="button" id="generateBtn" class="btn" style="margin-bottom: 15px; background: #6c757d;">Generate Tracking Number</button>
+                    <div class="form-group">
+                        <label for="sender">Sender Name</label>
+                        <input type="text" id="sender" placeholder="e.g. John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="receiver">Receiver Name</label>
+                        <input type="text" id="receiver" placeholder="e.g. Jane Smith" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="destination">Destination</label>
+                        <input type="text" id="destination" placeholder="e.g. New York, NY" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">Register Package</button>
+                </form>
+                <div id="createStatus" class="status-message" style="display: none;"></div>
+            </div>
+
+            <!-- Add Journey Update -->
+            <div class="card">
+                <h2> Add Journey Update</h2>
+                <form id="updateShipmentForm">
+                    <div class="form-group">
+                        <label for="shipmentId">Tracking Number</label>
+                        <input type="text" id="shipmentId" placeholder="e.g. PM-12345" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="status">Status Update</label>
+                        <select id="status" required>
+                            <option value="">Select Status</option>
+                            <option value="Picked Up">Picked Up</option>
+                            <option value="In Transit">In Transit</option>
+                            <option value="Out for Delivery">Out for Delivery</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Delayed">Delayed</option>
+                            <option value="Returned">Returned</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Current Location</label>
+                        <input type="text" id="location" placeholder="e.g. Chicago, IL" required>
+                    </div>
+                    <button type="submit" class="btn">Update Shipment</button>
+                </form>
+                <div id="updateStatus" class="status-message" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Recent Updates -->
+        <div class="recent-updates">
+            <h3> Recent Updates</h3>
+            <div id="recentUpdates">
+                <p style="color: #6c757d; text-align: center; padding: 20px;">Loading recent updates...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase Configuration
+        const url = 'https://irkglfbrmiuydjmzgjuv.supabase.co';
+        const key = 'sb_publishable_QUI7elFmVBaHTmw-kAgtVw_7aJKpxq0';
+        const supabase = window.supabase.createClient(url, key);
+
+        // Check admin access and load recent updates on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAccess();
+            loadRecentUpdates();
+        });
+
+        // Generate Tracking Number
+        function generateTrackingNumber() {
+            const timestamp = Date.now();
+            const random = Math.floor(Math.random() * 1000);
+            return `PM-${timestamp}${random}`.slice(0, 12); // PM-XXXXX format
+        }
+
+        // Generate button click handler
+        document.getElementById('generateBtn').addEventListener('click', () => {
+            const trackingNumber = generateTrackingNumber();
+            document.getElementById('trackingNumber').value = trackingNumber;
+            showStatus('createStatus', `✅ Tracking number generated: ${trackingNumber}`, 'success');
+        });
+
+        // Create New Shipment
+        document.getElementById('createShipmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const trackingNumber = document.getElementById('trackingNumber').value.trim();
+            const sender = document.getElementById('sender').value.trim();
+            const receiver = document.getElementById('receiver').value.trim();
+            const destination = document.getElementById('destination').value.trim();
+            const statusDiv = document.getElementById('createStatus');
+
+            if (!trackingNumber || !sender || !receiver || !destination) {
+                showStatus('createStatus', 'Please fill in all fields and generate a tracking number.', 'error');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('shipment')
+                    .insert([{
+                        tracking_number: trackingNumber,
+                        sender: sender,
+                        receiver: receiver,
+                        destination: destination,
+                        current_status: 'Picked Up'
+                    }])
+                    .select();
+
+                if (error) throw error;
+
+                showStatus('createStatus', `✅ Package registered successfully! Tracking #: ${trackingNumber}`, 'success');
+
+                // Reset form
+                document.getElementById('createShipmentForm').reset();
+
+                // Reload recent updates
+                loadRecentUpdates();
+
+            } catch (error) {
+                console.error('Error creating shipment:', error);
+                showStatus('createStatus', ` Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Add Journey Update
+        document.getElementById('updateShipmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const trackingNumber = document.getElementById('shipmentId').value.trim();
+            const status = document.getElementById('status').value;
+            const location = document.getElementById('location').value.trim();
+            const statusDiv = document.getElementById('updateStatus');
+
+            if (!trackingNumber || !status || !location) {
+                showStatus('updateStatus', 'Please fill in all fields.', 'error');
+                return;
+            }
+
+            try {
+                // First, get the shipment ID by tracking_number
+                const { data: shipmentData, error: fetchError } = await supabase
+                    .from('shipment')
+                    .select('id')
+                    .eq('tracking_number', trackingNumber)
+                    .single();
+
+                if (fetchError || !shipmentData) {
+                    throw new Error('Tracking number not found. Please check and try again.');
+                }
+
+                const shipmentId = shipmentData.id;
+
+                // Update the shipment status
+                const { error: shipmentError } = await supabase
+                    .from('shipment')
+                    .update({ current_status: status })
+                    .eq('id', shipmentId);
+
+                if (shipmentError) throw shipmentError;
+
+                // Add the log entry
+                const { error: logError } = await supabase
+                    .from('logs')
+                    .insert([{
+                        shipment_id: shipmentId,
+                        status_update: status,
+                        location: location
+                    }]);
+
+                if (logError) throw logError;
+
+                showStatus('updateStatus', `✅ Package ${trackingNumber} updated successfully!`, 'success');
+
+                // Reset form
+                document.getElementById('updateShipmentForm').reset();
+
+                // Reload recent updates
+                loadRecentUpdates();
+
+            } catch (error) {
+                console.error('Error updating shipment:', error);
+                showStatus('updateStatus', `❌ Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Load Recent Updates
+        async function loadRecentUpdates() {
+            try {
+                const { data: logs, error } = await supabase
+                    .from('logs')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+
+                if (error) throw error;
+
+                const updatesContainer = document.getElementById('recentUpdates');
+
+                if (!logs || logs.length === 0) {
+                    updatesContainer.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 20px;">No updates yet.</p>';
+                    return;
+                }
+
+                const updatesHtml = logs.map(log => `
+                    <div class="update-item">
+                        <div class="update-header">
+                            <span class="update-status">${log.status_update}</span>
+                            <span class="update-time">${new Date(log.created_at).toLocaleString()}</span>
+                        </div>
+                        <div class="update-location">📍 ${log.location} | Shipment #${log.shipment_id}</div>
+                    </div>
+                `).join('');
+
+                updatesContainer.innerHTML = updatesHtml;
+
+            } catch (error) {
+                console.error('Error loading updates:', error);
+                document.getElementById('recentUpdates').innerHTML =
+                    '<p style="color: #dc3545; text-align: center; padding: 20px;">Error loading updates.</p>';
+            }
+        }
+
+        // Utility function to show status messages
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status-message status-${type}`;
+            element.style.display = 'block';
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
