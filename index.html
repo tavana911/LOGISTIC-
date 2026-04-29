@@ -109,7 +109,7 @@
           return;
         }
 
-        resultsDiv.innerHTML = "Searching for Shipment #" + trackingNumber + "...";
+        resultsDiv.innerHTML = "Searching for Package #" + trackingNumber + "...";
 
         // Convert to number for the database
         const trackingID = parseInt(trackingNumber);
@@ -128,7 +128,7 @@
         }
 
         if (!shipment) {
-          resultsDiv.innerHTML = `<p style='color:red;'>❌ No shipment found with ID: ${trackingID}</p>`;
+          resultsDiv.innerHTML = `<p style='color:red;'>❌ No package found with ID: ${trackingID}</p>`;
           return;
         }
 
@@ -142,9 +142,9 @@
         // 3. Display Results
         let html = `
           <div class="tracking-results" style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-            <!-- Shipment Details Card -->
-            <div class="shipment-card" style="background: #f8f9fa; border-radius: 12px; padding: 24px; margin-bottom: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #007bff;">
-              <h3 style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 24px; font-weight: 600;">Shipment Details</h3>
+            <!-- Package Details Card -->
+            <div class="package-card" style="background: #f8f9fa; border-radius: 12px; padding: 24px; margin-bottom: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #007bff;">
+              <h3 style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 24px; font-weight: 600;">Package Details</h3>
               <div class="details-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
                 <div class="detail-item">
                   <span style="color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">From</span>

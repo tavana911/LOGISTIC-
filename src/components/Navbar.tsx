@@ -35,7 +35,7 @@ const Navbar = () => {
     if (window.trackShipment) {
       window.trackShipment(trackingNumber);
     } else {
-      alert(`Tracking shipment: ${trackingNumber}`);
+      alert(`Tracking package: ${trackingNumber}`);
     }
   };
 

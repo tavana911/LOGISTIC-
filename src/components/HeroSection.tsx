@@ -10,10 +10,15 @@ const HeroSection = () => {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!trackingNumber.trim()) {
-      alert("Please enter your shipment number.");
+      alert("Please enter your package number.");
       return;
     }
-    alert(`Tracking shipment number: ${trackingNumber}`);
+    // Call the global trackShipment function
+    if (window.trackShipment) {
+      window.trackShipment(trackingNumber);
+    } else {
+      alert(`Tracking package number: ${trackingNumber}`);
+    }
   };
 
   return (
@@ -38,22 +43,22 @@ const HeroSection = () => {
 
           <form onSubmit={handleSubmit} className="mt-6 sm:max-w-xl">
             <label htmlFor="tracking-number" className="sr-only">
-              Shipment number
+              Package number
             </label>
             <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
               <Input
                 id="tracking-number"
                 value={trackingNumber}
                 onChange={(event) => setTrackingNumber(event.target.value)}
-                placeholder="Enter shipment number"
-                aria-label="Shipment number"
+                placeholder="Enter package number"
+                aria-label="Package number"
               />
               <Button type="submit" size="lg" className="w-full sm:w-auto">
-                Track Shipment
+                Track Package
               </Button>
             </div>
             <p className="mt-3 text-sm text-primary-foreground/80">
-              Enter your shipment number above and click Track Shipment.
+              Enter your package number above and click Track Package.
             </p>
           </form>
         </div>
