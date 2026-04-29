@@ -4,12 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PAUPEMAGE LOGISTICS</title>
+    <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-      #results { width: 100%; max-width: 600px; margin: 10px auto; font-family: sans-serif; z-index: 9999; position: relative; }
-      .status-card { background: white; padding: 20px; border-radius: 12px; shadow: 0 4px 20px rgba(0,0,0,0.15); border-top: 6px solid #007bff; margin: 10px; }
-      .log-item { border-left: 2px solid #007bff; padding-left: 15px; margin: 15px 0; position: relative; }
-      .log-dot { position: absolute; left: -6px; top: 5px; width: 10px; height: 10px; background: #007bff; border-radius: 50%; }
+      #results { width: 100%; max-width: 600px; margin: 20px auto; font-family: sans-serif; position: relative; z-index: 1000; }
+      .status-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 6px solid #007bff; }
+      .journey-log { border-left: 2px solid #007bff; padding-left: 15px; margin: 15px 0; position: relative; }
+      .journey-dot { position: absolute; left: -6px; top: 5px; width: 10px; height: 10px; background: #007bff; border-radius: 50%; }
     </style>
   </head>
 
@@ -29,73 +30,79 @@
       async function trackShipment(manualNum = null) {
         const resultsDiv = document.getElementById('results');
         
-        // 1. Find the number (from argument, or search all inputs)
+        // 1. Get tracking number from input
         let num = manualNum;
         if (!num) {
           const allInputs = document.querySelectorAll('input');
           for (let i of allInputs) {
-            if (i.value.trim().toUpperCase().startsWith('PM')) {
+            if (i.value.trim().length > 3) { // Grab the first input with text
               num = i.value.trim();
               break;
             }
           }
-          if (!num && allInputs.length > 0) num = allInputs[0].value.trim();
         }
 
         if (!num) return;
 
-        resultsDiv.innerHTML = `<div style="text-align:center;background:#eee;padding:10px;border-radius:8px;">Searching Database for: ${num}...</div>`;
+        resultsDiv.innerHTML = `<div style="text-align:center; padding:20px; background:#f8f9fa; border-radius:8px;">Searching for <b>${num}</b>...</div>`;
+        resultsDiv.scrollIntoView({ behavior: 'smooth' });
 
-        // 2. The Database Call
-        // NOTE: If this fails, check if your table is named 'shipment' or 'shipments'
+        // 2. Database call with the Specific Relationship Fix (!shipment_id)
         const { data, error } = await _paupemage
           .from('shipment') 
-          .select('*, logs(*)')
+          .select('*, logs!shipment_id(*)') 
           .eq('tracking_number', num)
           .maybeSingle();
 
         if (error) {
-          console.error("Supabase Error:", error);
-          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:red;">Database Error. Please try again later.</div>`;
+          console.error("Database Error:", error);
+          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:red;">Error: ${error.message}</div>`;
           return;
         }
 
         if (!data) {
-          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:orange;">No record found for <b>${num}</b>. Check the ID and try again.</div>`;
+          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:orange;">Package <b>${num}</b> not found. Please double-check your ID.</div>`;
           return;
         }
 
-        // 3. Build UI
-        let logsHtml = data.logs && data.logs.length > 0 
-          ? data.logs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map(l => `
-              <div class="log-item">
-                <div class="log-dot"></div>
-                <b>${l.status_update}</b><br>
-                <small>${l.location} | ${new Date(l.created_at).toLocaleDateString()}</small>
-              </div>
-            `).join('')
-          : '<p>No history yet.</p>';
+        // 3. Sort Logs (Newest first)
+        const sortedLogs = data.logs ? data.logs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)) : [];
 
+        // 4. Update UI
         resultsDiv.innerHTML = `
           <div class="status-card">
-            <h2 style="margin:0;color:#007bff;">${data.tracking_number}</h2>
-            <p><b>Current Status:</b> ${data.current_status}</p>
-            <p><b>Destination:</b> ${data.destination}</p>
-            <hr>
-            <h4>Journey History</h4>
-            ${logsHtml}
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="margin:0; color:#007bff;">${data.tracking_number}</h2>
+                <span style="background:#007bff; color:white; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:bold;">${data.current_status.toUpperCase()}</span>
+            </div>
+            <p style="margin-top:10px; color:#555;"><b>To:</b> ${data.destination}</p>
+            <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+            <h4 style="margin:0 0 15px 0;">Journey History</h4>
+            ${sortedLogs.length > 0 ? sortedLogs.map(l => `
+              <div class="journey-log">
+                <div class="journey-dot"></div>
+                <b>${l.status_update}</b><br>
+                <small style="color:#666;">${l.location} | ${new Date(l.created_at).toLocaleString()}</small>
+              </div>
+            `).join('') : '<p style="color:#999;">Awaiting first scan...</p>'}
+            <div id="map" style="height:200px; border-radius:8px; margin-top:20px; border:1px solid #ddd;"></div>
           </div>
         `;
-        resultsDiv.scrollIntoView({ behavior: 'smooth' });
+
+        // Initialize Map
+        setTimeout(() => {
+            const map = L.map('map').setView([6.5244, 3.3792], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        }, 200);
       }
 
-      // Force globally
+      // Make global
       window.trackShipment = trackShipment;
 
-      // Detect button clicks anywhere on the page
+      // Force track when ANY button with "Track" text is clicked
       document.addEventListener('click', (e) => {
         if (e.target.innerText && e.target.innerText.toUpperCase().includes('TRACK')) {
-          setTimeout(trackShipment, 100); // Small delay to let React update the input value
+          setTimeout(() => trackShipment(), 100);
         }
       });
     </script>
