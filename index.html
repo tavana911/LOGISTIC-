@@ -6,27 +6,40 @@
     <title>PAUPEMAGE LOGISTICS</title>
     <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+      #results:empty { display: none; }
+      .journey-item { margin-bottom: 15px; position: relative; padding-left: 20px; border-left: 2px solid #007bff; }
+      .journey-dot { position: absolute; left: -6px; top: 5px; width: 10px; height: 10px; background: #007bff; border-radius: 50%; }
+    </style>
   </head>
 
   <body>
-    <div id="results" style="max-width: 800px; margin: 20px auto; font-family: sans-serif;"></div>
+    <div id="results" style="max-width: 800px; margin: 20px auto; font-family: sans-serif; padding: 0 15px;"></div>
 
     <div id="root"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <script>
       const url = 'https://irkglfbrmiuydjmzgjuv.supabase.co';
       const key = 'sb_publishable_QUI7elFmVBaHTmw-kAgtVw_7aJKpxq0';
       const paupemageDB = supabase.createClient(url, key);
 
-      // --- 1. THE TRACKING FUNCTION ---
       async function trackShipment(trackingNumber) {
         const resultsDiv = document.getElementById('results');
+        
+        // If trackingNumber wasn't passed, try to find it in the input box
+        if (!trackingNumber) {
+          const input = document.querySelector('input');
+          trackingNumber = input ? input.value.trim() : "";
+        }
+
         if (!trackingNumber) return;
 
-        resultsDiv.innerHTML = "<p style='text-align:center;'>Searching for Package #" + trackingNumber + "...</p>";
+        resultsDiv.innerHTML = `<div style="text-align:center; padding: 20px; background: #f8f9fa; border-radius: 8px;">Searching for <b>${trackingNumber}</b>...</div>`;
+        resultsDiv.scrollIntoView({ behavior: 'smooth' });
 
-        // Fetch shipment and logs together
         const { data: shipment, error: shipError } = await paupemageDB
           .from('shipment')
           .select('*, logs(*)')
@@ -34,63 +47,65 @@
           .maybeSingle();
 
         if (shipError || !shipment) {
-          resultsDiv.innerHTML = `<p style='color:red; text-align:center;'>No package found with number: ${trackingNumber}</p>`;
+          resultsDiv.innerHTML = `<div style="color:red; text-align:center; padding: 20px; background: #fff1f1; border-radius: 8px; border: 1px solid red;">⚠️ Package <b>${trackingNumber}</b> not found. Please check the ID.</div>`;
           return;
         }
 
-        // --- 2. BUILD THE DISPLAY ---
+        // BUILD DISPLAY
         let html = `
-          <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-top: 5px solid #007bff;">
-            <h3 style="margin-top:0;">Shipment Found: ${shipment.tracking_number}</h3>
-            <p><strong>Status:</strong> <span style="color:#007bff;">${shipment.current_status}</span></p>
-            <p><strong>To:</strong> ${shipment.destination}</p>
+          <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-top: 6px solid #007bff; margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin:0; color: #333;">Package ID: ${shipment.tracking_number}</h3>
+                <span style="background: #e7f3ff; color: #007bff; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 14px;">${shipment.current_status.toUpperCase()}</span>
+            </div>
+            <p style="color: #666; margin-bottom: 20px;"><b>Destination:</b> ${shipment.destination}</p>
             
-            <hr>
-            <h4>Package Journey</h4>
-            <div id="log-list" style="border-left: 2px solid #007bff; padding-left: 15px; margin-left: 10px;">
+            <h4 style="border-bottom: 1px solid #eee; padding-bottom: 10px;">Travel History</h4>
+            <div id="log-list" style="margin-top: 15px;">
         `;
 
-        // Add each log to the list
         if (shipment.logs && shipment.logs.length > 0) {
             const sortedLogs = shipment.logs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
             sortedLogs.forEach(log => {
                 html += `
-                  <div style="margin-bottom: 15px; position: relative;">
-                    <div style="position: absolute; left: -21px; top: 5px; width: 10px; height: 10px; background: #007bff; border-radius: 50%;"></div>
-                    <strong>${log.status_update}</strong><br>
-                    <small style="color: #666;">${log.location} | ${new Date(log.created_at).toLocaleString()}</small>
+                  <div class="journey-item">
+                    <div class="journey-dot"></div>
+                    <b style="color: #333;">${log.status_update}</b><br>
+                    <small style="color: #888;">${log.location} — ${new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</small>
                   </div>
                 `;
             });
         } else {
-            html += "<p>Initial processing...</p>";
+            html += "<p style='color: #999; font-style: italic;'>Package information received. Pending further updates...</p>";
         }
 
         html += `</div>
-                 <div id="tracking-map" style="height: 250px; border-radius: 8px; margin-top: 15px;"></div>
+                 <div id="tracking-map" style="height: 250px; border-radius: 10px; margin-top: 20px; border: 1px solid #ddd;"></div>
+                 <div style="text-align: center; margin-top: 20px;">
+                    <a href="https://wa.me/yournumber" style="color: #25D366; text-decoration: none; font-weight: bold; font-size: 14px;">💬 Need Help? Contact Support</a>
+                 </div>
                  </div>`;
         
         resultsDiv.innerHTML = html;
 
-        // Initialize Map
-        if (shipment.logs && shipment.logs.length > 0) {
-            initializeMap(shipment.logs);
-        }
+        // Init Map
+        setTimeout(() => {
+          const map = L.map('tracking-map').setView([6.5244, 3.3792], 4);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        }, 100);
       }
 
-      function initializeMap(logs) {
-        const map = L.map('tracking-map').setView([6.5244, 3.3792], 5); // Default center (Nigeria)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        logs.forEach(log => {
-           // Markers would go here if we had coordinates
-        });
-      }
-
+      // GLOBAL ACCESS
       window.trackShipment = trackShipment;
+
+      // THE AUTO-FIX: This force-connects your React button to the code
+      document.addEventListener('click', function(e) {
+        if (e.target && (e.target.innerText === 'Track' || e.target.innerText === 'TRACK')) {
+          trackShipment();
+        }
+      });
     </script>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
