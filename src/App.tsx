@@ -38,7 +38,7 @@ const App = () => (
           </Routes>
         </main>
         <Footer />
-      </BrowserRouter>
+      </HashRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
