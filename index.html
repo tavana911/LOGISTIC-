@@ -7,17 +7,15 @@
     <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-      #results { width: 100%; max-width: 600px; margin: 20px auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; position: relative; z-index: 9999; }
-      .status-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border-top: 8px solid #007bff; margin-bottom: 50px; }
-      .journey-log { border-left: 2px solid #007bff; padding-left: 20px; margin: 20px 0; position: relative; }
+      #results { width: 100%; max-width: 600px; margin: 20px auto; font-family: 'Segoe UI', sans-serif; position: relative; z-index: 9999; }
+      .status-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border-top: 8px solid #007bff; }
+      .journey-log { border-left: 2px solid #007bff; padding-left: 20px; margin: 15px 0; position: relative; }
       .journey-dot { position: absolute; left: -7px; top: 5px; width: 12px; height: 12px; background: #007bff; border-radius: 50%; border: 2px solid white; }
-      .status-badge { background: #e7f3ff; color: #007bff; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 13px; text-transform: uppercase; }
     </style>
   </head>
 
   <body>
     <div id="results"></div>
-
     <div id="root"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -31,7 +29,6 @@
       async function trackShipment(manualNum = null) {
         const resultsDiv = document.getElementById('results');
         
-        // Find tracking number from input
         let num = manualNum;
         if (!num) {
           const allInputs = document.querySelectorAll('input');
@@ -44,77 +41,63 @@
         }
 
         if (!num) return;
+        resultsDiv.innerHTML = `<div style="text-align:center; padding:30px; background:white; border-radius:12px;">Searching...</div>`;
 
-        resultsDiv.innerHTML = `<div style="text-align:center; padding:30px; background:white; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">🚀 Fetching details for <b>${num}</b>...</div>`;
-        resultsDiv.scrollIntoView({ behavior: 'smooth' });
-
-        // DATABASE CALL: Uses the standard relationship join
+        // --- THE "FORCE-JOIN" FIX ---
+        // We use logs!shipment_id to bypass the "more than one relationship" error
         const { data, error } = await _paupemage
           .from('shipment') 
-          .select('*, logs(*)') 
+          .select('*, logs!shipment_id(*)') 
           .eq('tracking_number', num)
           .maybeSingle();
 
         if (error) {
-          console.error("Database Error:", error);
-          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:red;">
-            <b>Error:</b> ${error.message}<br>
-            <small>If this says "multiple relationships," check your Supabase DB link settings.</small>
-          </div>`;
+          console.error("DB Error:", error);
+          // If !shipment_id still errors, your column name in the DB is different.
+          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:red;">Error: ${error.message}</div>`;
           return;
         }
 
         if (!data) {
-          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:orange;">
-             Tracking Number <b>${num}</b> not found.
-          </div>`;
+          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:orange;">Tracking ID <b>${num}</b> not found.</div>`;
           return;
         }
 
-        // Sort logs by newest date
         const sortedLogs = data.logs ? data.logs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)) : [];
 
         resultsDiv.innerHTML = `
           <div class="status-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h2 style="margin:0; color:#333;">${data.tracking_number}</h2>
-                <span class="status-badge">${data.current_status}</span>
-            </div>
-            <p style="color:#666; margin-bottom:20px;"><b>Destination:</b> ${data.destination}</p>
-            
+            <h2 style="margin:0; color:#333;">${data.tracking_number}</h2>
+            <p><b>Status:</b> <span style="color:#007bff; font-weight:bold;">${data.current_status}</span></p>
+            <p><b>Destination:</b> ${data.destination}</p>
             <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
-            
-            <h4 style="margin:0 0 15px 0; color:#444;">Movement History</h4>
-            ${sortedLogs.length > 0 ? sortedLogs.map(l => `
+            <h4>Package History</h4>
+            ${sortedLogs.map(l => `
               <div class="journey-log">
                 <div class="journey-dot"></div>
-                <b style="color:#333;">${l.status_update}</b><br>
-                <small style="color:#888;">${l.location} | ${new Date(l.created_at).toLocaleString()}</small>
+                <b>${l.status_update}</b><br>
+                <small>${l.location} | ${new Date(l.created_at).toLocaleString()}</small>
               </div>
-            `).join('') : '<p style="color:#999;">Awaiting first scan at sorting hub...</p>'}
-            
-            <div id="map" style="height:220px; border-radius:12px; margin-top:20px; border:1px solid #eee;"></div>
+            `).join('') || '<p>No updates yet.</p>'}
+            <div id="map" style="height:200px; border-radius:12px; margin-top:20px; border:1px solid #eee;"></div>
           </div>
         `;
+        resultsDiv.scrollIntoView({ behavior: 'smooth' });
 
-        // Initialize Map
         setTimeout(() => {
             const map = L.map('map').setView([6.5244, 3.3792], 4);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         }, 300);
       }
 
-      // Export function globally
       window.trackShipment = trackShipment;
 
-      // Event Listener to catch the React button click
       document.addEventListener('click', (e) => {
         if (e.target.innerText && e.target.innerText.toUpperCase().includes('TRACK')) {
           setTimeout(() => trackShipment(), 200);
         }
       });
     </script>
-
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
