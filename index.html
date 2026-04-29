@@ -4,17 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PAUPEMAGE LOGISTICS</title>
-    <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-      #results:empty { display: none; }
-      .journey-item { margin-bottom: 15px; position: relative; padding-left: 20px; border-left: 2px solid #007bff; }
-      .journey-dot { position: absolute; left: -6px; top: 5px; width: 10px; height: 10px; background: #007bff; border-radius: 50%; }
+      #results { width: 100%; max-width: 600px; margin: 10px auto; font-family: sans-serif; z-index: 9999; position: relative; }
+      .status-card { background: white; padding: 20px; border-radius: 12px; shadow: 0 4px 20px rgba(0,0,0,0.15); border-top: 6px solid #007bff; margin: 10px; }
+      .log-item { border-left: 2px solid #007bff; padding-left: 15px; margin: 15px 0; position: relative; }
+      .log-dot { position: absolute; left: -6px; top: 5px; width: 10px; height: 10px; background: #007bff; border-radius: 50%; }
     </style>
   </head>
 
   <body>
-    <div id="results" style="max-width: 800px; margin: 20px auto; font-family: sans-serif; padding: 0 15px;"></div>
+    <div id="results"></div>
 
     <div id="root"></div>
 
@@ -24,84 +24,78 @@
     <script>
       const url = 'https://irkglfbrmiuydjmzgjuv.supabase.co';
       const key = 'sb_publishable_QUI7elFmVBaHTmw-kAgtVw_7aJKpxq0';
-      const paupemageDB = supabase.createClient(url, key);
+      const _paupemage = supabase.createClient(url, key);
 
-      async function trackShipment(trackingNumber) {
+      async function trackShipment(manualNum = null) {
         const resultsDiv = document.getElementById('results');
         
-        // If trackingNumber wasn't passed, try to find it in the input box
-        if (!trackingNumber) {
-          const input = document.querySelector('input');
-          trackingNumber = input ? input.value.trim() : "";
+        // 1. Find the number (from argument, or search all inputs)
+        let num = manualNum;
+        if (!num) {
+          const allInputs = document.querySelectorAll('input');
+          for (let i of allInputs) {
+            if (i.value.trim().toUpperCase().startsWith('PM')) {
+              num = i.value.trim();
+              break;
+            }
+          }
+          if (!num && allInputs.length > 0) num = allInputs[0].value.trim();
         }
 
-        if (!trackingNumber) return;
+        if (!num) return;
 
-        resultsDiv.innerHTML = `<div style="text-align:center; padding: 20px; background: #f8f9fa; border-radius: 8px;">Searching for <b>${trackingNumber}</b>...</div>`;
-        resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        resultsDiv.innerHTML = `<div style="text-align:center;background:#eee;padding:10px;border-radius:8px;">Searching Database for: ${num}...</div>`;
 
-        const { data: shipment, error: shipError } = await paupemageDB
-          .from('shipment')
+        // 2. The Database Call
+        // NOTE: If this fails, check if your table is named 'shipment' or 'shipments'
+        const { data, error } = await _paupemage
+          .from('shipment') 
           .select('*, logs(*)')
-          .eq('tracking_number', trackingNumber)
+          .eq('tracking_number', num)
           .maybeSingle();
 
-        if (shipError || !shipment) {
-          resultsDiv.innerHTML = `<div style="color:red; text-align:center; padding: 20px; background: #fff1f1; border-radius: 8px; border: 1px solid red;">⚠️ Package <b>${trackingNumber}</b> not found. Please check the ID.</div>`;
+        if (error) {
+          console.error("Supabase Error:", error);
+          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:red;">Database Error. Please try again later.</div>`;
           return;
         }
 
-        // BUILD DISPLAY
-        let html = `
-          <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-top: 6px solid #007bff; margin-top: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="margin:0; color: #333;">Package ID: ${shipment.tracking_number}</h3>
-                <span style="background: #e7f3ff; color: #007bff; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 14px;">${shipment.current_status.toUpperCase()}</span>
-            </div>
-            <p style="color: #666; margin-bottom: 20px;"><b>Destination:</b> ${shipment.destination}</p>
-            
-            <h4 style="border-bottom: 1px solid #eee; padding-bottom: 10px;">Travel History</h4>
-            <div id="log-list" style="margin-top: 15px;">
-        `;
-
-        if (shipment.logs && shipment.logs.length > 0) {
-            const sortedLogs = shipment.logs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
-            sortedLogs.forEach(log => {
-                html += `
-                  <div class="journey-item">
-                    <div class="journey-dot"></div>
-                    <b style="color: #333;">${log.status_update}</b><br>
-                    <small style="color: #888;">${log.location} — ${new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</small>
-                  </div>
-                `;
-            });
-        } else {
-            html += "<p style='color: #999; font-style: italic;'>Package information received. Pending further updates...</p>";
+        if (!data) {
+          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:orange;">No record found for <b>${num}</b>. Check the ID and try again.</div>`;
+          return;
         }
 
-        html += `</div>
-                 <div id="tracking-map" style="height: 250px; border-radius: 10px; margin-top: 20px; border: 1px solid #ddd;"></div>
-                 <div style="text-align: center; margin-top: 20px;">
-                    <a href="https://wa.me/yournumber" style="color: #25D366; text-decoration: none; font-weight: bold; font-size: 14px;">💬 Need Help? Contact Support</a>
-                 </div>
-                 </div>`;
-        
-        resultsDiv.innerHTML = html;
+        // 3. Build UI
+        let logsHtml = data.logs && data.logs.length > 0 
+          ? data.logs.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map(l => `
+              <div class="log-item">
+                <div class="log-dot"></div>
+                <b>${l.status_update}</b><br>
+                <small>${l.location} | ${new Date(l.created_at).toLocaleDateString()}</small>
+              </div>
+            `).join('')
+          : '<p>No history yet.</p>';
 
-        // Init Map
-        setTimeout(() => {
-          const map = L.map('tracking-map').setView([6.5244, 3.3792], 4);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        }, 100);
+        resultsDiv.innerHTML = `
+          <div class="status-card">
+            <h2 style="margin:0;color:#007bff;">${data.tracking_number}</h2>
+            <p><b>Current Status:</b> ${data.current_status}</p>
+            <p><b>Destination:</b> ${data.destination}</p>
+            <hr>
+            <h4>Journey History</h4>
+            ${logsHtml}
+          </div>
+        `;
+        resultsDiv.scrollIntoView({ behavior: 'smooth' });
       }
 
-      // GLOBAL ACCESS
+      // Force globally
       window.trackShipment = trackShipment;
 
-      // THE AUTO-FIX: This force-connects your React button to the code
-      document.addEventListener('click', function(e) {
-        if (e.target && (e.target.innerText === 'Track' || e.target.innerText === 'TRACK')) {
-          trackShipment();
+      // Detect button clicks anywhere on the page
+      document.addEventListener('click', (e) => {
+        if (e.target.innerText && e.target.innerText.toUpperCase().includes('TRACK')) {
+          setTimeout(trackShipment, 100); // Small delay to let React update the input value
         }
       });
     </script>
