@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAUPEMAGE LOGISTICS - Admin Dashboard</title>
-    
+    <title>PAUPEMAGE LOGISTICS - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+
     <script>
       (function() {
         const PAUPEMAGE_KEY = "TheBoss@paupemage1"; 
-        if (sessionStorage.getItem("adminAllowed") === "true") {
-          return; 
-        } else {
-          const password = prompt("Paupemage Logistics Admin: Please enter Security Key");
+        if (sessionStorage.getItem("adminAllowed") !== "true") {
+          const password = prompt("Paupemage Admin: Enter Security Key");
           if (password === PAUPEMAGE_KEY) {
             sessionStorage.setItem("adminAllowed", "true");
           } else {
@@ -22,195 +24,91 @@
       })();
     </script>
 
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            display: none; 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f8f9fa; color: #333; line-height: 1.6;
-        }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .header { 
-            background: linear-gradient(135deg, #007bff, #0056b3);
-            color: white; padding: 30px 0; text-align: center;
-            margin-bottom: 30px; border-radius: 10px;
-        }
-        .dashboard-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); 
-            gap: 30px; margin-bottom: 30px; 
-        }
-        .card { 
-            background: white; border-radius: 12px; padding: 25px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #e9ecef;
-        }
-        .card h2 { color: #007bff; margin-bottom: 20px; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
-        .form-group input, .form-group select { 
-            width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 6px; 
-        }
-        .btn { 
-            background: #007bff; color: white; border: none; padding: 12px;
-            border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;
-        }
-        .btn-success { background: #28a745; }
-        .status-message { margin-top: 15px; padding: 12px; border-radius: 6px; display: none; }
-        .status-success { background: #d4edda; color: #155724; }
-        .status-error { background: #f8d7da; color: #721c24; }
-        .recent-updates { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .update-item { border-left: 4px solid #007bff; padding: 10px 15px; margin-bottom: 10px; background: #f1f8ff; }
-        .update-header { display: flex; justify-content: space-between; font-weight: bold; color: #007bff; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>PAUPEMAGE LOGISTICS</h1>
-            <p>Admin Dashboard - Private Access Only</p>
-        </div>
+    <div class="max-w-4xl mx-auto py-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-800">PAUPEMAGE LOGISTICS</h1>
+            <p class="text-gray-600 font-semibold">Admin Dashboard</p>
+        </header>
 
-        <div class="dashboard-grid">
-            <div class="card">
-                <h2>Create New Shipment</h2>
-                <form id="createShipmentForm">
-                    <div class="form-group">
-                        <label>Tracking Number</label>
-                        <input type="text" id="trackingNumber" readonly style="background: #e9ecef;">
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-blue-600">
+                <h2 class="text-xl font-bold mb-4">Create Shipment</h2>
+                <div class="space-y-3">
+                    <div class="flex gap-2">
+                        <input type="text" id="trackNum" readonly placeholder="Click Generate" class="bg-gray-50 border p-2 flex-grow rounded">
+                        <button onclick="generateID()" class="bg-gray-700 text-white px-3 py-2 rounded text-sm">Generate</button>
                     </div>
-                    <button type="button" id="generateBtn" class="btn" style="margin-bottom: 15px; background: #6c757d;">Generate Tracking Number</button>
-                    <div class="form-group"><input type="text" id="sender" placeholder="Sender Name" required></div>
-                    <div class="form-group"><input type="text" id="receiver" placeholder="Receiver Name" required></div>
-                    <div class="form-group"><input type="text" id="destination" placeholder="Destination (e.g. Lagos, NG)" required></div>
-                    <button type="submit" class="btn btn-success">Register Package</button>
-                </form>
-                <div id="createStatus" class="status-message"></div>
+                    <input type="text" id="sender" placeholder="Sender Name" class="border p-2 w-full rounded">
+                    <input type="text" id="receiver" placeholder="Receiver Name" class="border p-2 w-full rounded">
+                    <input type="text" id="dest" placeholder="Destination" class="border p-2 w-full rounded">
+                    <button onclick="saveShipment()" class="w-full bg-green-600 text-white py-3 rounded font-bold">Register Package</button>
+                </div>
             </div>
 
-            <div class="card">
-                <h2>Add Journey Update</h2>
-                <form id="updateShipmentForm">
-                    <div class="form-group">
-                        <label>Tracking Number</label>
-                        <input type="text" id="shipmentId" placeholder="Paste PM- Tracking Number" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Status Update</label>
-                        <select id="statusSelect" required>
-                            <option value="">Select Status</option>
-                            <option value="Picked Up">Picked Up</option>
-                            <option value="In Transit">In Transit</option>
-                            <option value="Out for Delivery">Out for Delivery</option>
-                            <option value="Delivered">Delivered</option>
-                            <option value="Delayed">Delayed</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Current Location</label>
-                        <input type="text" id="location" placeholder="e.g. Port Harcourt Hub" required>
-                    </div>
-                    <button type="submit" class="btn" style="background: #fd7e14;">Update Shipment</button>
-                </form>
-                <div id="updateStatus" class="status-message"></div>
-            </div>
-        </div>
-
-        <div class="recent-updates">
-            <h3>Recent Activity Log</h3>
-            <div id="recentUpdates">
-                <p style="text-align: center; padding: 20px;">Loading updates...</p>
+            <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-orange-500">
+                <h2 class="text-xl font-bold mb-4">Update Status</h2>
+                <div class="space-y-3">
+                    <input type="text" id="upTrack" placeholder="Tracking Number (PM-...)" class="border p-2 w-full rounded">
+                    <select id="upStatus" class="border p-2 w-full rounded">
+                        <option value="Picked Up">Picked Up</option>
+                        <option value="In Transit">In Transit</option>
+                        <option value="Out for Delivery">Out for Delivery</option>
+                        <option value="Delivered">Delivered</option>
+                    </select>
+                    <input type="text" id="upLoc" placeholder="Current Location" class="border p-2 w-full rounded">
+                    <button onclick="updateStatus()" class="w-full bg-orange-600 text-white py-3 rounded font-bold">Push Update</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // SUPABASE CONFIG
         const supabaseUrl = 'https://irkglfbrmiuydjmzgjuv.supabase.co';
         const supabaseKey = 'sb_publishable_QUI7elFmVBaHTmw-kAgtVw_7aJKpxq0';
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // Reveal body after password check
-       function revealAdmin() {
-    if (sessionStorage.getItem("adminAllowed") === "true") {
-        // This forces the body to show even if other things are still loading
-        document.body.setAttribute("style", "display: block !important");
-        console.log("Admin Revealed");
-        
-        // Only run this if the database is ready
-        if (typeof loadRecentUpdates === "function") {
-            loadRecentUpdates();
+        function generateID() {
+            const id = "PM-" + Math.floor(100000 + Math.random() * 900000);
+            document.getElementById('trackNum').value = id;
         }
-    }
-}
-        // Generate ID
-        document.getElementById('generateBtn').onclick = () => {
-            const id = "PM-" + Date.now().toString().slice(-6) + Math.floor(Math.random() * 100);
-            document.getElementById('trackingNumber').value = id;
-        };
 
-        // Register Package
-        document.getElementById('createShipmentForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('trackingNumber').value;
+        async function saveShipment() {
+            const id = document.getElementById('trackNum').value;
             const sender = document.getElementById('sender').value;
             const receiver = document.getElementById('receiver').value;
-            const dest = document.getElementById('destination').value;
+            const dest = document.getElementById('dest').value;
 
-            if(!id) return alert("Please generate a tracking number first!");
+            if(!id || !sender) return alert("Fill all fields!");
 
-            const { error } = await _supabase.from('shipment').insert([{
-                tracking_number: id, sender: sender, receiver: receiver, 
-                destination: dest, current_status: 'Picked Up'
-            }]);
+            const { error } = await _supabase.from('shipment').insert([
+                { tracking_number: id, sender: sender, receiver: receiver, destination: dest, current_status: 'Picked Up' }
+            ]);
 
-            if (error) {
-                showStatus('createStatus', 'Error: ' + error.message, 'error');
-            } else {
-                showStatus('createStatus', ' Registered: ' + id, 'success');
-                document.getElementById('createShipmentForm').reset();
-                loadRecentUpdates();
+            if (error) alert("Error: " + error.message);
+            else {
+                alert("Success! Shipment " + id + " is live.");
+                location.reload();
             }
-        };
-
-        // Update Shipment
-        document.getElementById('updateShipmentForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('shipmentId').value.trim();
-            const status = document.getElementById('statusSelect').value;
-            const loc = document.getElementById('location').value;
-
-            // 1. Find the shipment internal ID
-            const { data: shipData } = await _supabase.from('shipment').select('id').eq('tracking_number', id).single();
-            
-            if(!shipData) return showStatus('updateStatus', '❌ Tracking number not found!', 'error');
-
-            // 2. Update status and add log
-            await _supabase.from('shipment').update({ current_status: status }).eq('id', shipData.id);
-            await _supabase.from('logs').insert([{ shipment_id: shipData.id, status_update: status, location: loc }]);
-
-            showStatus('updateStatus', '✅ Status updated to ' + status, 'success');
-            document.getElementById('updateShipmentForm').reset();
-            loadRecentUpdates();
-        };
-
-        async function loadRecentUpdates() {
-            const { data: logs } = await _supabase.from('logs').select('*, shipment(tracking_number)').order('created_at', { ascending: false }).limit(5);
-            const container = document.getElementById('recentUpdates');
-            if(!logs || logs.length === 0) {
-                container.innerHTML = '<p>No recent activity found.</p>';
-                return;
-            }
-            container.innerHTML = logs.map(log => `
-                <div class="update-item">
-                    <div class="update-header"><span>${log.status_update}</span><span>${new Date(log.created_at).toLocaleTimeString()}</span></div>
-                    <div> ${log.location} | ID: ${log.shipment?.tracking_number || 'Unknown'}</div>
-                </div>
-            `).join('');
         }
 
-        function showStatus(id, msg, type) {
-            const el = document.getElementById(id);
-            el.textContent = msg;
-            el.className = `status-message status-${type}`;
-            el.style.display = 'block';
-            setTimeout(() => el.style.display = 'none', 50
+        async function updateStatus() {
+            const id = document.getElementById('upTrack').value;
+            const status = document.getElementById('upStatus').value;
+            const loc = document.getElementById('upLoc').value;
+
+            // Find shipment ID
+            const { data: sData } = await _supabase.from('shipment').select('id').eq('tracking_number', id).single();
+            if(!sData) return alert("Tracking number not found!");
+
+            // Update main status
+            await _supabase.from('shipment').update({ current_status: status }).eq('id', sData.id);
+            // Add log
+            await _supabase.from('logs').insert([{ shipment_id: sData.id, status_update: status, location: loc }]);
+
+            alert("Status Updated!");
+            location.reload();
+        }
+    </script>
+</body>
+</html>
