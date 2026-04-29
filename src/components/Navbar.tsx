@@ -15,6 +15,7 @@ const navLinks = [
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState("");
   const location = useLocation();
 
   useEffect(() => {
@@ -24,6 +25,19 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => setOpen(false), [location]);
+
+  const handleTrack = () => {
+    if (!trackingNumber.trim()) {
+      alert("Please enter a tracking number.");
+      return;
+    }
+    // Call the global trackShipment function
+    if (window.trackShipment) {
+      window.trackShipment(trackingNumber);
+    } else {
+      alert(`Tracking shipment: ${trackingNumber}`);
+    }
+  };
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "bg-background shadow-md" : "bg-background/95 backdrop-blur-sm"}`}>
@@ -40,7 +54,7 @@ const Navbar = () => {
           </span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden md:flex items-center gap-4">
           {navLinks.map((l) => (
             <NavLink
               key={l.to}
@@ -57,8 +71,21 @@ const Navbar = () => {
               {l.label}
             </NavLink>
           ))}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Track Package:</span>
+            <input
+              type="text"
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              placeholder="e.g. PAU-9928374"
+              className="px-3 py-1 border border-input rounded-md text-sm w-32"
+            />
+            <Button onClick={handleTrack} size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold">
+              Track
+            </Button>
+          </div>
           <NavLink to="/contact">
-            <Button className="ml-3 bg-accent hover:bg-accent/90 text-accent-foreground font-semibold">
+            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold">
               Get a Quote
             </Button>
           </NavLink>
@@ -72,6 +99,19 @@ const Navbar = () => {
       {open && (
         <div className="md:hidden bg-background border-t animate-fade-in">
           <div className="container-main py-4 flex flex-col gap-2">
+            <div className="flex flex-col gap-2 p-4 border-b">
+              <span className="text-sm text-muted-foreground">Enter your tracking number below to see your package status.</span>
+              <input
+                type="text"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                placeholder="e.g. PAU-9928374"
+                className="px-3 py-2 border border-input rounded-md text-sm"
+              />
+              <Button onClick={handleTrack} size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold">
+                Track Package
+              </Button>
+            </div>
             {navLinks.map((l) => (
               <NavLink
                 key={l.to}
