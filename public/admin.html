@@ -115,21 +115,87 @@ async function saveShipment() {
         }
 
         async function updateStatus() {
-            const id = document.getElementById('upTrack').value;
-            const status = document.getElementById('upStatus').value;
-            const loc = document.getElementById('upLoc').value;
+            try {
+                const trackingId = document.getElementById('upTrack').value.toUpperCase().trim();
+                const status = document.getElementById('upStatus').value;
+                const location = document.getElementById('upLoc').value.trim();
 
-            // Find shipment ID
-            const { data: sData } = await _supabase.from('shipment').select('id').eq('tracking_number', id).single();
-            if(!sData) return alert("Tracking number not found!");
+                if (!trackingId || !status || !location) {
+                    alert('Please fill all fields.');
+                    return;
+                }
 
-            // Update main status
-            await _supabase.from('shipment').update({ current_status: status }).eq('id', sData.id);
-            // Add log
-            await _supabase.from('logs').insert([{ shipment_id: sData.id, status_update: status, location: loc }]);
+                // 1. Check if shipment exists in shipments table
+                const { data: existing, error: checkError } = await _supabase
+                    .from('shipments')
+                    .select('id')
+                    .eq('tracking_id', trackingId)
+                    .maybeSingle();
 
-            alert("Status Updated!");
-            location.reload();
+                if (checkError) {
+                    console.error('Check error:', checkError);
+                    throw new Error('Failed to check shipment.');
+                }
+
+                let shipmentId;
+                if (!existing) {
+                    // 2. Create new shipment
+                    const { data: newShipment, error: createError } = await _supabase
+                        .from('shipments')
+                        .insert([{
+                            tracking_id: trackingId,
+                            status: status,
+                            location: location,
+                            sender: 'Paupemage Logistics',
+                            delivery_date: 'Pending'
+                        }])
+                        .select('id')
+                        .single();
+
+                    if (createError || !newShipment) {
+                        console.error('Create error:', createError);
+                        throw new Error('Failed to create new shipment.');
+                    }
+                    shipmentId = newShipment.id;
+                    console.log('Created new shipment:', trackingId);
+                } else {
+                    // 3. Update existing
+                    const { error: updateError } = await _supabase
+                        .from('shipments')
+                        .update({ 
+                            status: status, 
+                            location: location 
+                        })
+                        .eq('id', existing.id);
+
+                    if (updateError) {
+                        console.error('Update error:', updateError);
+                        throw new Error('Failed to update shipment.');
+                    }
+                    shipmentId = existing.id;
+                    console.log('Updated shipment:', trackingId);
+                }
+
+                // 4. Log the update
+                const { error: logError } = await _supabase
+                    .from('logs')
+                    .insert([{
+                        shipment_id: shipmentId,
+                        status: status,
+                        location: location
+                    }]);
+
+                if (logError) {
+                    console.error('Log error:', logError);
+                }
+
+                console.log(`Status updated and logged for ${trackingId}`);
+                alert(`Success! ${trackingId} updated to "${status}" at ${location}.`);
+                location.reload();
+            } catch (err) {
+                console.error('UpdateStatus error:', err);
+                alert(`Error: ${err.message}. Check console for details.`);
+            }
         }
     </script>
 </body>
