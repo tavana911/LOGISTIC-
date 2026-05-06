@@ -98,7 +98,7 @@ async function saveShipment() {
                         sender,
                         delivery_date: deliveryDate,
                         admin_note: adminNote
-                    }]);
+                    }], { onConflict: 'tracking_id' });
 
                 if (error) {
                     console.error('Supabase error:', error);
@@ -106,7 +106,7 @@ async function saveShipment() {
                 } else {
                     console.log('Shipment saved successfully:', trackingIdRaw);
                     alert(`Success! Shipment ${trackingIdRaw} is live.`);
-                    location.reload();
+                    window.location.reload();
                 }
             } catch (err) {
                 console.error('Unexpected error:', err);
@@ -191,7 +191,7 @@ async function saveShipment() {
 
                 console.log(`Status updated and logged for ${trackingId}`);
                 alert(`Success! ${trackingId} updated to "${status}" at ${location}.`);
-                location.reload();
+                window.location.reload();
             } catch (err) {
                 console.error('UpdateStatus error:', err);
                 alert(`Error: ${err.message}. Check console for details.`);
