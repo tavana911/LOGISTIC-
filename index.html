@@ -63,11 +63,12 @@
 
       async function trackShipment(manualNum = null) {
         const resultsDiv = document.getElementById('results');
-        let num = manualNum;
+        let num = (manualNum || '').toUpperCase().trim();
         if (!num) {
           const allInputs = document.querySelectorAll('input');
           for (let i of allInputs) {
-            if (i.value.trim().length > 2) { num = i.value.trim(); break; }
+            const val = i.value.trim();
+            if (val.length > 2) { num = val.toUpperCase(); break; }
           }
         }
         if (!num) return;
@@ -75,12 +76,12 @@
         resultsDiv.innerHTML = `<div style="text-align:center; padding:50px; background:white; border-radius:20px;">📡 Fetching the latest updates...</div>`;
         resultsDiv.scrollIntoView({ behavior: 'smooth' });
 
-        // 1. Get Shipment
+        // 1. Get Shipment (case-insensitive via upper)
         const { data: shipment, error: sError } = await _paupemage
-          .from('shipment').select('*').eq('tracking_number', num).maybeSingle();
+          .from('shipments').select('*').eq('tracking_id', num).maybeSingle();
 
         if (sError || !shipment) {
-          resultsDiv.innerHTML = `<div class="status-card" style="border-top-color:#ef4444;">❌ Tracking ID <b>${num}</b> not found. Check your entry in Admin.</div>`;
+          alert(`No shipment found for ${num}. Please check the ID and try again.`);
           return;
         }
 
@@ -91,14 +92,14 @@
           .eq('shipment_id', shipment.id)
           .order('created_at', { ascending: false }); // THIS FIXES THE LOG ORDER
 
-        const progressPercent = calculateProgress(shipment.current_status);
+        const progressPercent = calculateProgress(shipment.status);
 
         resultsDiv.innerHTML = `
           <div class="status-card">
 <div class="info-row">
                 <div class="data-box">
-                    <span class="label">ID Number</span>
-                    <span class="value" style="color:var(--primary); font-size: 24px;">${shipment.tracking_number}</span>
+<span class="label">ID Number</span>
+                    <span class="value" style="color:var(--primary); font-size: 24px;">${shipment.tracking_id}</span>
                 </div>
                 <div style="text-align:right;">
                     <span class="label">Sender</span>
@@ -123,8 +124,8 @@
 
             <div class="info-row">
                 <div class="data-box">
-                    <span class="label">Final Destination</span>
-                    <span class="value">${shipment.destination}</span>
+                    <span class="label">Current Location</span>
+                    <span class="value">${shipment.location || 'N/A'}</span>
                 </div>
                 <div style="text-align:right;">
                     <span class="label">Network</span>
@@ -138,7 +139,7 @@
                 <div class="journey-log">
                     <div class="journey-dot"></div>
                     <div class="location-tag">${l.location.toUpperCase()}</div><br>
-                    <b style="color:var(--text); font-size:15px;">${l.status_update}</b>
+                    <b style="color:var(--text); font-size:15px;">${l.status}</b>
                     <span class="log-time">${new Date(l.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
                 `).join('') : '<p style="color:#94a3b8; text-align:center;">Registering package details...</p>'}
