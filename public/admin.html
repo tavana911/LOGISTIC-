@@ -75,23 +75,42 @@
             document.getElementById('trackNum').value = id;
         }
 
-        async function saveShipment() {
-            const id = document.getElementById('trackNum').value;
-            const sender = document.getElementById('sender').value;
-            const receiver = document.getElementById('receiver').value;
-            const dest = document.getElementById('dest').value;
-            const adminNote = document.getElementById('adminNote').value || '';
+async function saveShipment() {
+            try {
+                const trackingIdRaw = document.getElementById('trackNum').value.toUpperCase();
+                const sender = document.getElementById('sender').value;
+                const status = 'Picked Up';
+                const location = document.getElementById('dest').value;
+                const deliveryDate = '';
+                const adminNote = document.getElementById('adminNote').value || '';
 
-            if(!id || !sender) return alert("Fill all fields!");
+                if (!trackingIdRaw || !sender) {
+                    alert('Please fill tracking ID and sender.');
+                    return;
+                }
 
-            const { error } = await _supabase.from('shipment').upsert([
-                { tracking_number: id, sender: sender, receiver: receiver, destination: dest, current_status: 'Picked Up', admin_note: adminNote }
-            ]);
+                const { error } = await _supabase
+                    .from('shipments')
+                    .upsert([{
+                        tracking_id: trackingIdRaw,
+                        status,
+                        location,
+                        sender,
+                        delivery_date: deliveryDate,
+                        admin_note: adminNote
+                    }]);
 
-            if (error) alert("Error: " + error.message);
-            else {
-                alert("Success! Shipment " + id + " is live.");
-                location.reload();
+                if (error) {
+                    console.error('Supabase error:', error);
+                    alert('Failed to save: ' + error.message);
+                } else {
+                    console.log('Shipment saved successfully:', trackingIdRaw);
+                    alert(`Success! Shipment ${trackingIdRaw} is live.`);
+                    location.reload();
+                }
+            } catch (err) {
+                console.error('Unexpected error:', err);
+                alert('An unexpected error occurred. Check console.');
             }
         }
 
