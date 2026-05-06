@@ -40,7 +40,8 @@
                     </div>
                     <input type="text" id="sender" placeholder="Sender Name" class="border p-2 w-full rounded">
                     <input type="text" id="receiver" placeholder="Receiver Name" class="border p-2 w-full rounded">
-                    <input type="text" id="dest" placeholder="Destination" class="border p-2 w-full rounded">
+<input type="text" id="dest" placeholder="Destination" class="border p-2 w-full rounded">
+                    <textarea id="adminNote" placeholder="Admin Note (optional)" class="border p-2 w-full rounded" rows="3"></textarea>
                     <button onclick="saveShipment()" class="w-full bg-green-600 text-white py-3 rounded font-bold">Register Package</button>
                 </div>
             </div>
@@ -53,7 +54,8 @@
                         <option value="Picked Up">Picked Up</option>
                         <option value="In Transit">In Transit</option>
                         <option value="Out for Delivery">Out for Delivery</option>
-                        <option value="Delivered">Delivered</option>
+<option value="Delivered">Delivered</option>
+                        <option value="On Hold">On Hold</option>
                     </select>
                     <input type="text" id="upLoc" placeholder="Current Location" class="border p-2 w-full rounded">
                     <button onclick="updateStatus()" class="w-full bg-orange-600 text-white py-3 rounded font-bold">Push Update</button>
@@ -78,11 +80,12 @@
             const sender = document.getElementById('sender').value;
             const receiver = document.getElementById('receiver').value;
             const dest = document.getElementById('dest').value;
+            const adminNote = document.getElementById('adminNote').value || '';
 
             if(!id || !sender) return alert("Fill all fields!");
 
-            const { error } = await _supabase.from('shipment').insert([
-                { tracking_number: id, sender: sender, receiver: receiver, destination: dest, current_status: 'Picked Up' }
+            const { error } = await _supabase.from('shipment').upsert([
+                { tracking_number: id, sender: sender, receiver: receiver, destination: dest, current_status: 'Picked Up', admin_note: adminNote }
             ]);
 
             if (error) alert("Error: " + error.message);

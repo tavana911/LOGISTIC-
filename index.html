@@ -95,19 +95,30 @@
 
         resultsDiv.innerHTML = `
           <div class="status-card">
-            <div class="info-row">
+<div class="info-row">
                 <div class="data-box">
                     <span class="label">ID Number</span>
                     <span class="value" style="color:var(--primary); font-size: 24px;">${shipment.tracking_number}</span>
                 </div>
                 <div style="text-align:right;">
-                    <span class="label">Status</span>
-                    <b style="color:#059669; font-size: 16px;">${shipment.current_status}</b>
+                    <span class="label">Sender</span>
+                    <span class="value">${shipment.sender || 'N/A'}</span>
                 </div>
             </div>
 
-            <div class="progress-container">
+<div class="progress-container">
                 <div class="progress-bar" id="p-bar" style="width: 0%"></div>
+            </div>
+
+            <div class="info-row">
+                <div>
+                    <span class="label">Delivery Date</span>
+                    <span class="value">${shipment.delivery_date || 'TBD'}</span>
+                </div>
+                <div style="text-align:right;">
+                    <span class="label">Admin Notice</span>
+                    <span class="value">${shipment.admin_notice || 'None'}</span>
+                </div>
             </div>
 
             <div class="info-row">
